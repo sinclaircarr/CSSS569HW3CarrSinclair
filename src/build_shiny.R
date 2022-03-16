@@ -164,7 +164,7 @@ server <- function(input, output, session) {
         color = super_region_name,
         group = location_name
       )) +
-      geom_point(size = rel(2)) +
+      geom_point(size = rel(2), alpha = 0.45) +
       labs(
         x = paste0("GBD 2019 ", unique(exposure$label), " (g/day)"),
         y = paste0("GBD 2020 ", unique(exposure$label), " (g/day)"),
@@ -201,7 +201,7 @@ server <- function(input, output, session) {
     setnames(temp, c("mean_val", "lo_val", "hi_val"), c("mean_effect_size", "lower_2.5_bound", "upper_97.5_bound"))
     p2 <- ggplot(data = temp, aes(x = exposure, y = mean_effect_size, ymin = lower_2.5_bound, ymax = upper_97.5_bound, color = version, fill = version)) +
       geom_line() +
-      geom_ribbon(linetype = "dashed", alpha = 0.4) +
+      geom_ribbon(linetype = "", alpha = 0.4) +
       labs(x = "Exposure (g/day)", y = "Relative Risk") +
       geom_hline(yintercept = 1) +
       goldenScatterCAtheme + 
@@ -221,47 +221,6 @@ server <- function(input, output, session) {
              )))
     
   })
-  
-  # # Define paf scatter plot output
-  # output$paf_scatter <- renderPlotly({
-  #   # Define colors
-  #   cols <- brewer.pal(9, "Set1") # Has yellow at index 6
-  #   cols <- cols[c(1:5, 7:8)] # Remove yellow and add pink
-  #   # Subset data
-  #   temp <- paf[age_group_name == input$sel_age_paf & sex == input$sel_sex_paf & cause_name == input$sel_cause_paf]
-  #   # Make plot
-  #   p3 <- ggplot(data = temp, aes(
-  #       x = gbd_2016,
-  #       y = gbd_2020,
-  #       color = super_region_name,
-  #       group = location_name
-  #     )) +
-  #     geom_point(size = rel(2)) +
-  #     labs(
-  #       x = paste0("GBD 2016 ", unique(paf$label)),
-  #       y = paste0("GBD 2020 ", unique(paf$label)),
-  #       color = "Super-region"
-  #     ) +
-  #     theme(
-  #       legend.direction = "vertical",
-  #       legend.text = element_text(size = rel(0.75)),
-  #       legend.title = element_blank()
-  #     ) +
-  #     goldenScatterCAtheme +
-  #     scale_color_manual(values = cols)
-  #   if (input$add_id_line_paf) p3 <- p3 + geom_abline(intercept = 0, slope = 1, linetype = "dashed", alpha = 0.75)
-  #   return(ggplotly(p3, tooltip = c("x", "y", "color", "group")) %>%
-  #            config(displayModeBar = F)  %>%
-  #            layout(
-  #              legend = list(
-  #                orientation = "v",
-  #                x = 0.01,
-  #                y = 1,
-  #                title = NA,
-  #                bgcolor = "rgba(0,0,0,0)"
-  #              )
-  #            ))
- # })
 }
 
 ## ----------------
