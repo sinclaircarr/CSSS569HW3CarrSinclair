@@ -21,7 +21,7 @@ locs <- readRDS("data/location_metadata.RDS")
 causes <- readRDS("data/cause_metadata.RDS")
 reis <- readRDS("data/rei_metadata.RDS")
 ages <- readRDS("data/age_metadata.RDS")
-pops <- readRDS("data/population.RDS")
+
 # Add some variables
 format_data <- function(df, merge_cause_name = F) {
   if (! "location_name" %in% names(df)) df <- merge(df, locs[,.(location_id, location_name)], by = "location_id")
@@ -35,15 +35,13 @@ format_data <- function(df, merge_cause_name = F) {
 }
 
 # load exposure data
-exposure <- readRDS("data/bmi_exposure.RDS") %>% format_data(.)
+exposure <- readRDS("data/alcohol_exposure.RDS") %>% format_data(.)
 
 # load relative risk (RR) data
-rr <- readRDS("data/bmi_rr.RDS")
-rr <- rr[version == "GBD 2019", location_id := 1]
-rr <- format_data(rr)
-# load population attributable fraction (PAF) data
-paf_list <- readRDS("data/bmi_paf.RDS")
-paf <- format_data(paf_list[[1]], merge_cause_name = T)
+rr <- readRDS("data/alcohol_rr.RDS")
+rr <- rr[version == "GBD 2016", location_id := 1]
+# rr <- format_data(rr)
+rr <- merge(rr, causes[,.(cause_id, cause_name)], by = "cause_id")
 
 # Set up args
 id_cols <- c("location_id", "year_id", "sex_id", "age_group_id")
@@ -79,13 +77,13 @@ goldenScatterCAtheme <- theme(
 ## Shiny App
 ## ===============================
 # Define vector of options to toggle from
-cause_opts <- causes[cause_id %in% unique(paf$cause_id)]$cause_name
+cause_opts <- causes[cause_id %in% unique(rr$cause_id)]$cause_name
 # Define vector of age groups to toggle from
-age_opts <- ages[age_group_id %in% unique(paf$age_group_id)]$age_group_name
+age_opts <- ages[age_group_id %in% unique(exposure$age_group_id)]$age_group_name
 # Define male female vector
 sex_opts <- c("Male", "Female")
 # Define loc opts
-loc_opts <- locs[location_id %in% unique(rr$location_id)]$location_name
+loc_opts <- locs[location_id %in% unique(exposure$location_id)]$location_name
 # Define main panel height
 main_panel_height <- "700px" # "700px" good for displaying on laptop; "1000px" good for displaying on large monitor
 # Define ymin and ymax limits
@@ -93,8 +91,8 @@ ymin_opts <- as.factor(c(1, 0, seq(100, 1000, by = 100)))
 ymax_opts <- as.factor(c(5, 2, 3, 4, seq(10, 100, by = 10), seq(100, 2200, by = 100)))
 # Create shiny ----
 ui <- navbarPage(
-  title = "Comparing GBD BMI by round",
-  theme = shinytheme("united"),
+  title = "Comparing GBD Alcohol by round",
+  theme = shinytheme("darkly"),
   tabsetPanel(tabPanel(title = "Exposure",
                        sidebarLayout(
                          sidebarPanel(
@@ -126,21 +124,6 @@ ui <- navbarPage(
                    label = "Cause",
                    choices = cause_opts
                  ),
-                 selectInput(
-                   inputId = "sel_loc_rr",
-                   label = "Location",
-                   choices = loc_opts
-                 ),
-                 selectInput(
-                   inputId = "sel_sex_rr", # Important to change the inputID from each tabPanel (using tag "_rr" for these inputIDs)
-                   label = "Sex",
-                   choices = sex_opts
-                 ),
-                 selectInput(
-                   inputId = "sel_age_rr",
-                   label = "Age",
-                   choices = age_opts
-                 ),
                  numericInput(
                    inputId = "num_ymin_rr",
                    label = "Y-Axis lower",
@@ -157,33 +140,6 @@ ui <- navbarPage(
                  )
                ),
                mainPanel(plotlyOutput("rel_risk", height = main_panel_height))
-             )),
-    tabPanel(title = "Population attributable fraction (PAF)",
-             sidebarLayout(
-               sidebarPanel(
-                 width = 3,
-                 selectInput(
-                   inputId = "sel_cause_paf",
-                   label = "Cause",
-                   choices = cause_opts
-                 ),
-                 selectInput(
-                   inputId = "sel_sex_paf",
-                   label = "Sex",
-                   choices = sex_opts
-                 ),
-                 selectInput(
-                   inputId = "sel_age_paf",
-                   label = "Age",
-                   choices = age_opts
-                 ),
-                 selectInput(
-                   inputId = "add_id_line_paf",
-                   label = "Add identity line",
-                   choices = c(FALSE, TRUE)
-                 )
-               ),
-               mainPanel(plotlyOutput("paf_scatter", height = main_panel_height))
              ))
   )
 )
@@ -210,8 +166,8 @@ server <- function(input, output, session) {
       )) +
       geom_point(size = rel(2)) +
       labs(
-        x = paste0("GBD 2019 ", unique(exposure$label), " (kg/m^2)"),
-        y = paste0("GBD 2020 ", unique(exposure$label), " (kg/m^2)"),
+        x = paste0("GBD 2019 ", unique(exposure$label), " (g/day)"),
+        y = paste0("GBD 2020 ", unique(exposure$label), " (g/day)"),
         color = "Super-region"
       ) +
       theme(
@@ -241,12 +197,12 @@ server <- function(input, output, session) {
     # Define colors
     cols <- brewer.pal(3, "Dark2")
     # Subset data
-    temp <- rr[cause_name == input$sel_cause_rr & sex == input$sel_sex_rr & age_group_name == input$sel_age_rr & location_name == input$sel_loc_rr]
+    temp <- rr[cause_name == input$sel_cause_rr]
     setnames(temp, c("mean_val", "lo_val", "hi_val"), c("mean_effect_size", "lower_2.5_bound", "upper_97.5_bound"))
     p2 <- ggplot(data = temp, aes(x = exposure, y = mean_effect_size, ymin = lower_2.5_bound, ymax = upper_97.5_bound, color = version, fill = version)) +
       geom_line() +
       geom_ribbon(linetype = "dashed", alpha = 0.4) +
-      labs(x = "Exposure (kg/m^2)", y = "Relative Risk") +
+      labs(x = "Exposure (g/day)", y = "Relative Risk") +
       geom_hline(yintercept = 1) +
       goldenScatterCAtheme + 
       theme(legend.title = element_text(size = rel(1)), legend.text = element_text(size = rel(1.2))) +
@@ -266,46 +222,46 @@ server <- function(input, output, session) {
     
   })
   
-  # Define paf scatter plot output
-  output$paf_scatter <- renderPlotly({
-    # Define colors
-    cols <- brewer.pal(9, "Set1") # Has yellow at index 6
-    cols <- cols[c(1:5, 7:8)] # Remove yellow and add pink
-    # Subset data
-    temp <- paf[age_group_name == input$sel_age_paf & sex == input$sel_sex_paf & cause_name == input$sel_cause_paf]
-    # Make plot
-    p3 <- ggplot(data = temp, aes(
-        x = gbd_2019,
-        y = gbd_2020,
-        color = super_region_name,
-        group = location_name
-      )) +
-      geom_point(size = rel(2)) +
-      labs(
-        x = paste0("GBD 2019 ", unique(paf$label)),
-        y = paste0("GBD 2020 ", unique(paf$label)),
-        color = "Super-region"
-      ) +
-      theme(
-        legend.direction = "vertical",
-        legend.text = element_text(size = rel(0.75)),
-        legend.title = element_blank()
-      ) +
-      goldenScatterCAtheme +
-      scale_color_manual(values = cols)
-    if (input$add_id_line_paf) p3 <- p3 + geom_abline(intercept = 0, slope = 1, linetype = "dashed", alpha = 0.75)
-    return(ggplotly(p3, tooltip = c("x", "y", "color", "group")) %>%
-             config(displayModeBar = F)  %>%
-             layout(
-               legend = list(
-                 orientation = "v",
-                 x = 0.01,
-                 y = 1,
-                 title = NA,
-                 bgcolor = "rgba(0,0,0,0)"
-               )
-             ))
-  })
+  # # Define paf scatter plot output
+  # output$paf_scatter <- renderPlotly({
+  #   # Define colors
+  #   cols <- brewer.pal(9, "Set1") # Has yellow at index 6
+  #   cols <- cols[c(1:5, 7:8)] # Remove yellow and add pink
+  #   # Subset data
+  #   temp <- paf[age_group_name == input$sel_age_paf & sex == input$sel_sex_paf & cause_name == input$sel_cause_paf]
+  #   # Make plot
+  #   p3 <- ggplot(data = temp, aes(
+  #       x = gbd_2016,
+  #       y = gbd_2020,
+  #       color = super_region_name,
+  #       group = location_name
+  #     )) +
+  #     geom_point(size = rel(2)) +
+  #     labs(
+  #       x = paste0("GBD 2016 ", unique(paf$label)),
+  #       y = paste0("GBD 2020 ", unique(paf$label)),
+  #       color = "Super-region"
+  #     ) +
+  #     theme(
+  #       legend.direction = "vertical",
+  #       legend.text = element_text(size = rel(0.75)),
+  #       legend.title = element_blank()
+  #     ) +
+  #     goldenScatterCAtheme +
+  #     scale_color_manual(values = cols)
+  #   if (input$add_id_line_paf) p3 <- p3 + geom_abline(intercept = 0, slope = 1, linetype = "dashed", alpha = 0.75)
+  #   return(ggplotly(p3, tooltip = c("x", "y", "color", "group")) %>%
+  #            config(displayModeBar = F)  %>%
+  #            layout(
+  #              legend = list(
+  #                orientation = "v",
+  #                x = 0.01,
+  #                y = 1,
+  #                title = NA,
+  #                bgcolor = "rgba(0,0,0,0)"
+  #              )
+  #            ))
+ # })
 }
 
 ## ----------------
