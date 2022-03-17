@@ -23,4 +23,4 @@ Download repository and open the project csss_569_hw3.Rproj
 Run src/build_shiny.R
 
 ## Credits
-In collaboration with Justin Lo (jlo@uw.edu)
+In collaboration with Justin Lo (lojustin@uw.edu)
