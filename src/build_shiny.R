@@ -91,8 +91,8 @@ ymin_opts <- as.factor(c(1, 0, seq(100, 1000, by = 100)))
 ymax_opts <- as.factor(c(5, 2, 3, 4, seq(10, 100, by = 10), seq(100, 2200, by = 100)))
 # Create shiny ----
 ui <- navbarPage(
-  title = "Comparing GBD Alcohol by round",
-  theme = shinytheme("darkly"),
+  title = "Comparing GBD Alcohol estimations by cycle",
+  theme = shinytheme("lumen"),
   tabsetPanel(tabPanel(title = "Exposure",
                        sidebarLayout(
                          sidebarPanel(
@@ -115,32 +115,32 @@ ui <- navbarPage(
                          ),
                          mainPanel(plotlyOutput("exp_scatter", height = main_panel_height))
                        )),
-    tabPanel(title = "Relative risk",
-             sidebarLayout(
-               sidebarPanel(
-                 width = 3,
-                 selectInput(
-                   inputId = "sel_cause_rr",
-                   label = "Cause",
-                   choices = cause_opts
-                 ),
-                 numericInput(
-                   inputId = "num_ymin_rr",
-                   label = "Y-Axis lower",
-                   value = NA,
-                   min = 0,
-                   max = 1000
-                 ),
-                 numericInput(
-                   inputId = "num_ymax_rr",
-                   label = "Y-Axis upper",
-                   value = NA,
-                   min = 1,
-                   max = 2200
-                 )
-               ),
-               mainPanel(plotlyOutput("rel_risk", height = main_panel_height))
-             ))
+              tabPanel(title = "Relative risk",
+                       sidebarLayout(
+                         sidebarPanel(
+                           width = 3,
+                           selectInput(
+                             inputId = "sel_cause_rr",
+                             label = "Cause",
+                             choices = cause_opts
+                           ),
+                           numericInput(
+                             inputId = "num_ymin_rr",
+                             label = "Y-Axis lower",
+                             value = NA,
+                             min = 0,
+                             max = 1000
+                           ),
+                           numericInput(
+                             inputId = "num_ymax_rr",
+                             label = "Y-Axis upper",
+                             value = NA,
+                             min = 1,
+                             max = 2200
+                           )
+                         ),
+                         mainPanel(plotlyOutput("rel_risk", height = main_panel_height))
+                       ))
   )
 )
 
@@ -157,7 +157,7 @@ server <- function(input, output, session) {
     cols <- cols[c(1:5, 7:8)] # Remove yellow and add pink
     # Subset data and make plot
     p1 <- exposure[age_group_name == input$sel_age
-                & sex == input$sel_sex] %>%
+                   & sex == input$sel_sex] %>%
       ggplot(aes(
         x = gbd_2019,
         y = gbd_2020,
@@ -189,13 +189,13 @@ server <- function(input, output, session) {
                  bgcolor = "rgba(0,0,0,0)" # Transparent background
                )
              ))
-
+    
   })
   
   # Define relative risk plot output
   output$rel_risk <- renderPlotly({
     # Define colors
-    cols <- brewer.pal(3, "Dark2")
+    cols <- c("darkorange", "seagreen")
     # Subset data
     temp <- rr[cause_name == input$sel_cause_rr]
     setnames(temp, c("mean_val", "lo_val", "hi_val"), c("mean_effect_size", "lower_2.5_bound", "upper_97.5_bound"))
@@ -206,8 +206,8 @@ server <- function(input, output, session) {
       geom_hline(yintercept = 1) +
       goldenScatterCAtheme + 
       theme(legend.title = element_text(size = rel(1)), legend.text = element_text(size = rel(1.2))) +
-      scale_color_manual(values = c(cols[1], cols[3])) +
-      scale_fill_manual(values = c(cols[1], cols[3])) +
+      scale_color_manual(values = c(cols[1], cols[2])) +
+      scale_fill_manual(values = c(cols[1], cols[2])) +
       scale_y_continuous(limits = c(input$num_ymin_rr, input$num_ymax_rr))
     
     return(ggplotly(p2, tooltip = c("x", "y", "ymin", "ymax", "color", "text")) %>%
