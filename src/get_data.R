@@ -42,39 +42,6 @@ pops <- get_population(age_group_id = age_vec,
   .[, `:=` (run_id = NULL, year_id = NULL)]
 saveRDS(pops, file = "/ihme/homes/lojustin/csss_569_final_proj/data/population.RDS")
 
-# Get actual alcohol data ----
-# # Format draws from get_draws
-# format_draws <- function(df, version, measure, uncertainty = FALSE, log_rr, keep_cols = id_cols) {
-#   
-#   if(measure %in% "Relative risk") {
-#     if(!log_rr) {
-#       keep_cols <- c(id_cols, "cause_id", "exposure")
-#     } else {
-#       keep_cols <- c(id_cols, "cause_id")
-#     }
-#   }
-#   
-#   temp <- copy(df[, c(keep_cols, grep("draw_", names(df), value = T)), with = F])
-#   temp <- melt(temp, id.vars = keep_cols)
-#   
-#   if(!uncertainty) {
-#     temp[, mean_val := mean(value), by = keep_cols]
-#     out <- unique(temp[, c(keep_cols, "mean_val"), with = F])
-#     setnames(out, "mean_val", version)
-#   } else {
-#     
-#     temp[, mean_val := mean(value), by = c(keep_cols)]
-#     temp[, lo_val := quantile(value, probs = 0.025), by = c(keep_cols)]
-#     temp[, hi_val := quantile(value, probs = 0.975), by = c(keep_cols)]
-#     out <- unique(temp[, c(keep_cols, "mean_val", "lo_val", "hi_val"), with = F])
-#     out[, version := version]
-#     
-#   }
-#   
-#   out[, label := measure]
-#   return(out)
-# }
-
 # Get draws and format
 # Exposure ----
 print("getting alcohol exposure")
@@ -110,15 +77,7 @@ get_exposure <- function(gbd_2020_year_id = 2019) {
   return(expo)
 }
 
-saveRDS(ages, "data/age_metadata.RDS")
-saveRDS(causes, "data/cause_metadata.RDS")
-saveRDS(locs, "data/location_metadata.RDS")
-saveRDS(reis, "data/rei_metadata.RDS")
-
 exposure <- get_exposure()
-
-saveRDS(exposure, "data/alcohol_exposure.RDS")
-
 
 # RR ----
 print("getting alcohol rrs")
@@ -128,7 +87,7 @@ print("getting alcohol rrs")
 rr_files <- list.files("/mnt/team/team/pub/sub_risks/alcohol/alcohol/drugs_alcohol/rr/rr_2020/final", full.names = T)
 rr_new <-rbindlist(lapply(rr_files, fread), use.names = T)
 
-rr_files_old <- list.files("/mnt/team/team/pub/sub_risks/alcohol/alcohol/drugs_alcohol/rr/rr_2016/5", full.names = T)
+rr_files_old <- list.files("/mnt/team/team/pub/sub_risks/alcohol/alcohol/drugs_alcohol/rr/rr_2016/4", full.names = T)
 rr_old <-rbindlist(lapply(rr_files_old, fread), use.names = T)
 
 rr_old <- rr_old[cause_id %in% unique(rr_new$cause_id)] 
@@ -153,4 +112,8 @@ rr <- rbind(rr_old, rr_new)
 
 # Save data ----
 saveRDS(exposure, "data/alcohol_exposure.RDS")
-saveRDS(rr, "data/alcoho_rr.RDS")
+saveRDS(rr, "data/alcohol_rr.RDS")
+saveRDS(ages, "data/age_metadata.RDS")
+saveRDS(causes, "data/cause_metadata.RDS")
+saveRDS(locs, "data/location_metadata.RDS")
+saveRDS(reis, "data/rei_metadata.RDS")
